@@ -1,0 +1,1 @@
+verific -vhdl ../src/dream.vhd

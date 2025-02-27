@@ -1,0 +1,49 @@
+name: Linty
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Linty
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: ~/.sonar/cache
+          key: sonar
+          restore-keys: sonar
+
+      - name: Run Linty
+        run: |
+          docker run \
+            --user="$(id -u):$(id -g)" \
+            -e SONAR_HOST_URL=https://demo.linty-services.com \
+            -e SONAR_TOKEN="${{ secrets.SONARQUBE_SCANNER_FOR_PUBLIC_REPOSITORIES_TOKEN }}" \
+            -e SONAR_SCANNER_OPTS="-Dsonar.qualitygate.wait=true" \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            -e GITHUB_REPOSITORY_OWNER="$GITHUB_REPOSITORY_OWNER" \
+            -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
+            -e TABBY_CAD_LICENSE="$TABBY_CAD_LICENSE" \
+            -v "$PWD:/usr/src" \
+            lintyservices/linty-scanner:beta \
+            -Dproject.settings=./linty-conf/linty-project.properties
+
+        env:
+          TABBY_CAD_LICENSE: ${{ secrets.TABBY_CAD_LICENSE }}
+
+      - name: Debug
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: .linty/
+          include-hidden-files: true
